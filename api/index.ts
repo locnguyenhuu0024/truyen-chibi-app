@@ -1,6 +1,6 @@
 import { ComicTypes } from "@/utils/enums/comic.type";
 import { request } from "./axios";
-import { Comic } from "@/types/comic";
+import { Category, Comic } from "@/types/comic";
 import { ChapterResponse } from "@/types/chapter";
 
 const getHome = async (): Promise<any> => {
@@ -18,9 +18,19 @@ const getComicsByType = async (
   return res;
 };
 
-const getCategories = async (): Promise<any> => {
+const getCategories = async (): Promise<Category[]> => {
   const res = await request.get(`/comics/categories`);
-  return res;
+  return res.data;
+};
+
+const getComicsByCategory = async (
+  categorySlug: string,
+  page: number = 1
+): Promise<any> => {
+  const res = await request.get(
+    `/comics/categories/${categorySlug}?page=${page}`
+  );
+  return res.data;
 };
 
 const searchComics = async (keyword: string): Promise<any> => {
@@ -45,4 +55,5 @@ export {
   searchComics,
   getComicBySlug,
   getChapterById,
+  getComicsByCategory,
 };

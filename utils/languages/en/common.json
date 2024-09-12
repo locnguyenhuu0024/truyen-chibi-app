@@ -14,5 +14,7 @@
   "categories": "Categories",
   "description": "Description",
   "read_at_beginning": "Read from the beginning",
-  "read_new_chap": "Read latest chapter"
+  "read_new_chap": "Read latest chapter",
+  "close": "Close",
+  "no_more_comics": "No more comics"
 }

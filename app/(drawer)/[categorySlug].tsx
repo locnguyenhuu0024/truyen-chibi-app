@@ -1,40 +1,33 @@
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
-  StyleSheet,
   View,
-  Text,
   FlatList,
+  StyleSheet,
   TouchableOpacity,
   Modal,
+  Text,
 } from "react-native";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { ThemedText } from "@/components/ThemedText";
-import i18n from "@/utils/languages/i18n";
-import CustomCarousel from "@/components/CustomCarousel";
 import CustomCardComic from "@/components/CustomCardComic";
-import { useEffect, useState, useCallback, memo } from "react";
-import { getHome, getComicsByType } from "@/api";
+import { getComicsByCategory } from "@/api";
 import { cdnImage } from "@/constants/Api";
-import { ComicTypes } from "@/utils/enums/comic.type";
+import i18n from "@/utils/languages/i18n";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import Skeleton from "@/components/Skeleton";
-import { useRef } from "react";
 import { NavigationBar, NavButton } from "@/components/NavigationBar";
-import { Category } from "@/types/comic";
-import { useRouter } from "expo-router";
 import { useSelector, useDispatch } from "react-redux";
-import {
-  getCategories,
-  getCategory,
-  setCategory,
-} from "@/store/categoriesSlice";
+import { getCategories, setCategory } from "@/store/categoriesSlice";
+import { Category } from "@/types/comic";
 
-const MemoizedCustomCardComic = memo(CustomCardComic);
+const MemoizedCustomCardComic = React.memo(CustomCardComic);
 
-export default function HomeScreen() {
+export default function CategoryScreen() {
+  const { categorySlug, title } = useLocalSearchParams();
+  const navigation = useNavigation();
   const router = useRouter();
   const dispatch = useDispatch();
   const categories = useSelector(getCategories);
-  const currentCategory = useSelector(getCategory);
-  const [homeComics, setHomeComics] = useState<any[]>([]);
   const [comics, setComics] = useState<any[]>([]);
   const [page, setPage] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,49 +38,45 @@ export default function HomeScreen() {
   const [isCategoryPickerVisible, setIsCategoryPickerVisible] = useState(false);
 
   useEffect(() => {
-    getHomeData();
-  }, []);
+    navigation.setOptions({ title: title });
+  }, [navigation, title]);
 
   useEffect(() => {
-    getComicsByTypeData(page, ComicTypes.New);
-  }, [page]);
+    getComicsByCategoryData(page);
+  }, [page, categorySlug]);
 
-  const getHomeData = () => {
-    setIsLoading(true);
-    getHome()
-      .then((res) => {
-        setHomeComics(res.data?.items || []);
-      })
-      .catch((err) => console.error("Error fetching home data:", err))
-      .finally(() => setIsLoading(false));
-  };
-
-  const getComicsByTypeData = useCallback((page: number, type: string) => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    setIsLoadingMore(true);
-    getComicsByType(page, type)
-      .then((res) => {
-        const newComics = res.data?.items || [];
-        if (page === 1) {
-          setComics(newComics);
-        } else {
-          setComics((prevComics) => {
-            const existingIds = new Set(prevComics.map((comic) => comic._id));
-            const uniqueNewComics = newComics.filter(
-              (comic: { _id: string }) => !existingIds.has(comic._id)
-            );
-            return [...prevComics, ...uniqueNewComics];
-          });
-        }
-        setHasMoreData(newComics.length > 0);
-      })
-      .catch((err) => console.error("Error fetching comics by type:", err))
-      .finally(() => {
-        setIsLoadingMore(false);
-        loadingRef.current = false;
-      });
-  }, []);
+  const getComicsByCategoryData = useCallback(
+    (page: number) => {
+      if (loadingRef.current) return;
+      loadingRef.current = true;
+      setIsLoadingMore(true);
+      getComicsByCategory(categorySlug as string, page)
+        .then((res) => {
+          const comics = res || [];
+          if (page === 1) {
+            setComics(comics);
+          } else {
+            setComics((prevComics) => {
+              const existingIds = new Set(prevComics.map((comic) => comic._id));
+              const uniqueNewComics = comics.filter(
+                (comic: { _id: string }) => !existingIds.has(comic._id)
+              );
+              return [...prevComics, ...uniqueNewComics];
+            });
+          }
+          setHasMoreData(comics.length > 0);
+        })
+        .catch((err) =>
+          console.error("Error fetching comics by category:", err)
+        )
+        .finally(() => {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+          loadingRef.current = false;
+        });
+    },
+    [categorySlug]
+  );
 
   const onEndReached = useCallback(() => {
     if (!onEndReachedCalledDuringMomentumRef.current) {
@@ -117,22 +106,6 @@ export default function HomeScreen() {
     []
   );
 
-  const renderCarouselItem = useCallback(
-    ({ item, index }: { item: any; index: number }) => (
-      <MemoizedCustomCardComic
-        key={`${item._id}-${index}`}
-        title={item.name}
-        currentChapter={`${i18n.t("chapter")} ${
-          item?.chaptersLatest?.[0]?.chapter_name
-        }`}
-        thumbnail={`${cdnImage}/${item.thumb_url}`}
-        size="small"
-        slug={item.slug}
-      />
-    ),
-    []
-  );
-
   const renderSkeletonItem = useCallback(
     () => (
       <View style={styles.skeletonContainer}>
@@ -147,24 +120,6 @@ export default function HomeScreen() {
   const keyExtractor = useCallback(
     (item: any, index: number) => `${item._id}-${index}`,
     []
-  );
-
-  const renderHeader = useCallback(
-    () => (
-      <>
-        <View style={{ width: "100%", marginLeft: 36 }}>
-          <CustomCarousel
-            data={homeComics}
-            carouselWidth={360}
-            loop={true}
-            autoPlay={true}
-            renderItem={renderCarouselItem}
-          />
-        </View>
-        <ThemedText style={styles.title}>{i18n.t("new_updated")}</ThemedText>
-      </>
-    ),
-    [homeComics, renderCarouselItem]
   );
 
   const toggleCategoryPicker = () =>
@@ -203,7 +158,6 @@ export default function HomeScreen() {
         onMomentumScrollBegin={onMomentumScrollBegin}
         contentContainerStyle={styles.childContainer}
         numColumns={2}
-        ListHeaderComponent={renderHeader}
         columnWrapperStyle={styles.row}
         removeClippedSubviews={true}
         maxToRenderPerBatch={10}
@@ -211,13 +165,7 @@ export default function HomeScreen() {
         initialNumToRender={10}
         windowSize={21}
         ListFooterComponent={
-          isLoadingMore ? (
-            renderSkeletonItem
-          ) : !hasMoreData ? (
-            <ThemedText style={styles.endMessage}>
-              {i18n.t("no_more_comics")}
-            </ThemedText>
-          ) : null
+          isLoadingMore ? renderSkeletonItem : !hasMoreData ? <></> : null
         }
         ListEmptyComponent={
           isLoading ? null : (
@@ -238,12 +186,12 @@ export default function HomeScreen() {
               data={categories}
               renderItem={({ item }: { item: Category }) => (
                 <TouchableOpacity
-                  style={styles.CategoryItem}
+                  style={styles.categoryItem}
                   onPress={() => handleCategoryChange(item)}
                 >
                   <Text
                     style={
-                      item.slug === currentCategory?.slug
+                      item.slug === categorySlug
                         ? styles.selectedCategory
                         : null
                     }
@@ -253,7 +201,7 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               )}
               keyExtractor={(item) => item._id}
-              style={styles.CategoryList}
+              style={styles.categoryList}
             />
             <TouchableOpacity
               style={styles.closeButton}
@@ -272,6 +220,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     flexDirection: "column",
     alignItems: "center",
     gap: 8,
@@ -281,14 +230,11 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "center",
     marginTop: 16,
+    marginBottom: 8,
   },
   childContainer: {
     gap: 8,
     padding: 8,
-  },
-  comicCardContainer: {
-    flex: 1,
-    marginBottom: 8,
   },
   row: {
     justifyContent: "space-between",
@@ -321,10 +267,10 @@ const styles = StyleSheet.create({
     width: "80%",
     maxHeight: "80%",
   },
-  CategoryList: {
+  categoryList: {
     maxHeight: "90%",
   },
-  CategoryItem: {
+  categoryItem: {
     padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",

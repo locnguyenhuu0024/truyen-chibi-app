@@ -1,5 +1,5 @@
 import { Drawer } from "expo-router/drawer";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import FloatingSearchButton from "@/components/FloatingSearchButton";
 import SearchModal from "@/components/SearchModal";
 
@@ -11,6 +11,9 @@ import i18n from "@/utils/languages/i18n";
 
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useDispatch } from "react-redux";
+import { setCategories } from "@/store/categoriesSlice";
+import { getCategories } from "@/api";
 
 export function TabsLayout() {
   return (
@@ -42,6 +45,20 @@ export function TabsLayout() {
 export default function DrawerLayout() {
   const [isSearchModalVisible, setIsSearchModalVisible] = useState(false);
   const colorScheme = useColorScheme();
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const categoriesData = await getCategories();
+      dispatch(setCategories(categoriesData));
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
 
   return (
     <>

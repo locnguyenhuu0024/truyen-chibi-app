@@ -10,6 +10,8 @@ import { useEffect } from "react";
 import "react-native-reanimated";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import i18n from "@/utils/languages/i18n";
+import { store } from "@/store";
+import { Provider } from "react-redux";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -32,16 +34,18 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack
-        screenOptions={{
-          fullScreenGestureEnabled: true,
-          headerBackTitle: i18n.t("back"),
-          headerBackTitleVisible: true,
-        }}
-      >
-        <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
+      <Provider store={store}>
+        <Stack
+          screenOptions={{
+            fullScreenGestureEnabled: true,
+            headerBackTitle: i18n.t("back"),
+            headerBackTitleVisible: true,
+          }}
+        >
+          <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
+          <Stack.Screen name="+not-found" />
+        </Stack>
+      </Provider>
     </ThemeProvider>
   );
 }

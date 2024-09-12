@@ -10,6 +10,7 @@ export type ChapterData = {
   chapter_name: string;
   chapter_title: string;
   chapter_api_data: string;
+  chapter_id?: string;
 };
 
 export type Chapter = {

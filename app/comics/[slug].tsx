@@ -7,6 +7,7 @@ import {
   SectionList,
   Pressable,
   Button,
+  TouchableOpacity,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getComicBySlug } from "@/api";
@@ -15,12 +16,16 @@ import { cdnImage } from "@/constants/Api";
 import { useNavigation } from "@react-navigation/native";
 import i18n from "@/utils/languages/i18n";
 import { Link } from "expo-router";
+import { useDispatch } from "react-redux";
+import { setChapters } from "@/store/chaptersSlice";
+import { getChapterId } from "@/utils/chapter.helper";
 
 type SectionItem = Comic | ChapterData;
 
 export default function ComicDetailScreen() {
   const navigation = useNavigation();
   const router = useRouter();
+  const dispatch = useDispatch();
   const { slug, title } = useLocalSearchParams();
   const [comicDetails, setComicDetails] = useState<Comic | null>(null);
 
@@ -28,6 +33,7 @@ export default function ComicDetailScreen() {
     async function fetchComicDetails() {
       const response = await getComicBySlug(slug as string);
       setComicDetails(response);
+      dispatch(setChapters(response.chapters));
     }
     fetchComicDetails();
   }, [slug]);
@@ -39,7 +45,13 @@ export default function ComicDetailScreen() {
   const handleReadFromStart = () => {
     if (comicDetails && comicDetails.chapters[0].server_data.length > 0) {
       const firstChapter = comicDetails.chapters[0].server_data[0];
-      // router.push(`/reader/${slug}/${firstChapter.chapter_api_data}`);
+      const chapterId = getChapterId(firstChapter.chapter_api_data);
+      router.push({
+        pathname: "/comics/chapter/[id]",
+        params: {
+          id: chapterId,
+        },
+      });
     }
   };
 
@@ -49,7 +61,13 @@ export default function ComicDetailScreen() {
         comicDetails.chapters[0].server_data[
           comicDetails.chapters[0].server_data.length - 1
         ];
-      // router.push(`/reader/${slug}/${latestChapter.chapter_api_data}`);
+      const chapterId = getChapterId(latestChapter.chapter_api_data);
+      router.push({
+        pathname: "/comics/chapter/[id]",
+        params: {
+          id: chapterId,
+        },
+      });
     }
   };
 
@@ -105,14 +123,22 @@ export default function ComicDetailScreen() {
                 </View>
               </View>
               <View style={styles.buttonContainer}>
-                <Button
-                  title={i18n.t("read_at_beginning")}
+                <TouchableOpacity
+                  style={[styles.button, styles.secondaryButton]}
                   onPress={handleReadFromStart}
-                />
-                <Button
-                  title={i18n.t("read_new_chap")}
+                >
+                  <Text style={styles.secondaryButtonText}>
+                    {i18n.t("read_at_beginning")}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, styles.primaryButton]}
                   onPress={handleReadLatestChapter}
-                />
+                >
+                  <Text style={styles.primaryButtonText}>
+                    {i18n.t("read_new_chap")}
+                  </Text>
+                </TouchableOpacity>
               </View>
               <View style={styles.description}>
                 <Text style={styles.sectionTitle}>{i18n.t("description")}</Text>
@@ -128,7 +154,7 @@ export default function ComicDetailScreen() {
               href={{
                 pathname: "/comics/chapter/[id]",
                 params: {
-                  id: item.chapter_api_data.match(/\/([^\/]+)$/)?.[1] || "",
+                  id: getChapterId(item.chapter_api_data),
                 },
               }}
               asChild
@@ -209,5 +235,24 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     padding: 16,
     columnGap: 16,
+  },
+  button: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  primaryButton: {
+    backgroundColor: "#007AFF",
+  },
+  secondaryButton: {
+    backgroundColor: "#E5E5EA",
+  },
+  primaryButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "bold",
+  },
+  secondaryButtonText: {
+    color: "#007AFF",
+    fontWeight: "bold",
   },
 });

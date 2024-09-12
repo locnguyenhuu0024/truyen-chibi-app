@@ -14,5 +14,7 @@
   "categories": "Thể loại",
   "description": "Mô tả",
   "read_at_beginning": "Đọc từ đầu",
-  "read_new_chap": "Đọc chương mới nhất"
+  "read_new_chap": "Đọc chương mới nhất",
+  "close": "Đóng",
+  "no_more_comics": "No more comics"
 }

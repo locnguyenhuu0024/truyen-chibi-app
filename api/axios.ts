@@ -1,11 +1,7 @@
-import axios, { AxiosResponse } from "axios";
-import { Platform } from "react-native";
+import axios from "axios";
+// import { BASE_URL } from "@env";
 
-const BASE_URL =
-  Platform.OS === "android"
-    ? // ? "http://192.168.1.110:8080/api"
-      "http://10.10.78.47:8080/api"
-    : "http://localhost:8080/api";
+const BASE_URL = "http://localhost:8080/api";
 const ONE_MINUTE = 60000;
 
 declare module "axios" {
@@ -17,6 +13,7 @@ const request = axios.create({
   timeout: ONE_MINUTE,
   headers: {
     "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "true",
   },
 });
 
