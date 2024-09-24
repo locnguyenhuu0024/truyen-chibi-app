@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import CustomCardComic from "@/components/CustomCardComic";
-import { searchComics } from "@/api";
+import ApiService from "@/api";
 import { cdnImage } from "@/constants/Api";
 import i18n from "@/utils/languages/i18n";
 import { Ionicons } from "@expo/vector-icons";
@@ -28,11 +28,12 @@ const SearchModal: React.FC<SearchModalProps> = ({ isVisible, onClose }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const apiService = new ApiService();
 
   const handleSearch = useCallback(async (term: string) => {
     if (term.trim()) {
       try {
-        const results = await searchComics(term);
+        const results = await apiService.searchComics(term);
         setSearchResults(results);
       } catch (error) {
         console.error("Error searching comics:", error);

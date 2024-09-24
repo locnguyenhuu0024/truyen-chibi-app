@@ -10,7 +10,7 @@ export type ChapterData = {
   chapter_name: string;
   chapter_title: string;
   chapter_api_data: string;
-  chapter_id?: string;
+  chapter_id: string;
 };
 
 export type Chapter = {
@@ -31,4 +31,19 @@ export type Comic = {
   category: Category[];
   chapters: Chapter[];
   updatedAt: string;
+};
+
+export const initialComic: Comic = {
+  _id: "",
+  name: "",
+  slug: "",
+  origin_name: [],
+  content: "",
+  status: "",
+  thumb_url: "",
+  sub_docquyen: false,
+  author: [],
+  category: [],
+  chapters: [],
+  updatedAt: "",
 };

@@ -1,33 +1,19 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import {
-  View,
-  FlatList,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
-  Text,
-} from "react-native";
-import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
+import { View, FlatList, StyleSheet } from "react-native";
+import { useLocalSearchParams, useNavigation } from "expo-router";
 import { ThemedText } from "@/components/ThemedText";
 import CustomCardComic from "@/components/CustomCardComic";
-import { getComicsByCategory } from "@/api";
+import ApiService from "@/api";
 import { cdnImage } from "@/constants/Api";
 import i18n from "@/utils/languages/i18n";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import Skeleton from "@/components/Skeleton";
-import { NavigationBar, NavButton } from "@/components/NavigationBar";
-import { useSelector, useDispatch } from "react-redux";
-import { getCategories, setCategory } from "@/store/categoriesSlice";
-import { Category } from "@/types/comic";
 
 const MemoizedCustomCardComic = React.memo(CustomCardComic);
 
 export default function CategoryScreen() {
   const { categorySlug, title } = useLocalSearchParams();
   const navigation = useNavigation();
-  const router = useRouter();
-  const dispatch = useDispatch();
-  const categories = useSelector(getCategories);
   const [comics, setComics] = useState<any[]>([]);
   const [page, setPage] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,10 +21,10 @@ export default function CategoryScreen() {
   const [hasMoreData, setHasMoreData] = useState(true);
   const loadingRef = useRef(false);
   const onEndReachedCalledDuringMomentumRef = useRef(false);
-  const [isCategoryPickerVisible, setIsCategoryPickerVisible] = useState(false);
+  const apiService = new ApiService();
 
   useEffect(() => {
-    navigation.setOptions({ title: title });
+    navigation.setOptions({ title: title || "Action" });
   }, [navigation, title]);
 
   useEffect(() => {
@@ -50,7 +36,8 @@ export default function CategoryScreen() {
       if (loadingRef.current) return;
       loadingRef.current = true;
       setIsLoadingMore(true);
-      getComicsByCategory(categorySlug as string, page)
+      apiService
+        .getComicsByCategory((categorySlug as string) || "action", page)
         .then((res) => {
           const comics = res || [];
           if (page === 1) {
@@ -122,27 +109,6 @@ export default function CategoryScreen() {
     []
   );
 
-  const toggleCategoryPicker = () =>
-    setIsCategoryPickerVisible(!isCategoryPickerVisible);
-
-  const handleCategoryChange = (category: Category) => {
-    dispatch(setCategory(category));
-    toggleCategoryPicker();
-    router.push({
-      pathname: `/[categorySlug]`,
-      params: {
-        categorySlug: category.slug,
-        title: category?.name || "",
-      },
-    });
-  };
-
-  const navigationButtons: NavButton[] = [
-    { icon: "home", onPress: () => router.push("/") },
-    { icon: "list", onPress: toggleCategoryPicker },
-    { icon: "time", onPress: () => {} },
-  ];
-
   if (isLoading && comics.length === 0) {
     return <LoadingIndicator />;
   }
@@ -173,47 +139,6 @@ export default function CategoryScreen() {
           )
         }
       />
-      <NavigationBar buttons={navigationButtons} />
-      <Modal
-        visible={isCategoryPickerVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={toggleCategoryPicker}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.pickerContainer}>
-            <FlatList
-              data={categories}
-              renderItem={({ item }: { item: Category }) => (
-                <TouchableOpacity
-                  style={styles.categoryItem}
-                  onPress={() => handleCategoryChange(item)}
-                >
-                  <Text
-                    style={
-                      item.slug === categorySlug
-                        ? styles.selectedCategory
-                        : null
-                    }
-                  >
-                    {item.name}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              keyExtractor={(item) => item._id}
-              style={styles.categoryList}
-            />
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={toggleCategoryPicker}
-            >
-              <ThemedText style={styles.closeButtonText}>
-                {i18n.t("close")}
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }

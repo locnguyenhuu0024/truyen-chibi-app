@@ -1,39 +1,19 @@
-import {
-  StyleSheet,
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  Modal,
-} from "react-native";
+import { StyleSheet, View, FlatList } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import i18n from "@/utils/languages/i18n";
 import CustomCarousel from "@/components/CustomCarousel";
 import CustomCardComic from "@/components/CustomCardComic";
 import { useEffect, useState, useCallback, memo } from "react";
-import { getHome, getComicsByType } from "@/api";
+import ApiService from "@/api";
 import { cdnImage } from "@/constants/Api";
 import { ComicTypes } from "@/utils/enums/comic.type";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import Skeleton from "@/components/Skeleton";
 import { useRef } from "react";
-import { NavigationBar, NavButton } from "@/components/NavigationBar";
-import { Category } from "@/types/comic";
-import { useRouter } from "expo-router";
-import { useSelector, useDispatch } from "react-redux";
-import {
-  getCategories,
-  getCategory,
-  setCategory,
-} from "@/store/categoriesSlice";
 
 const MemoizedCustomCardComic = memo(CustomCardComic);
 
 export default function HomeScreen() {
-  const router = useRouter();
-  const dispatch = useDispatch();
-  const categories = useSelector(getCategories);
-  const currentCategory = useSelector(getCategory);
   const [homeComics, setHomeComics] = useState<any[]>([]);
   const [comics, setComics] = useState<any[]>([]);
   const [page, setPage] = useState<number>(1);
@@ -42,7 +22,7 @@ export default function HomeScreen() {
   const [hasMoreData, setHasMoreData] = useState(true);
   const loadingRef = useRef(false);
   const onEndReachedCalledDuringMomentumRef = useRef(false);
-  const [isCategoryPickerVisible, setIsCategoryPickerVisible] = useState(false);
+  const apiService = new ApiService();
 
   useEffect(() => {
     getHomeData();
@@ -54,9 +34,10 @@ export default function HomeScreen() {
 
   const getHomeData = () => {
     setIsLoading(true);
-    getHome()
+    apiService
+      .getHome()
       .then((res) => {
-        setHomeComics(res.data?.items || []);
+        setHomeComics(res.items || []);
       })
       .catch((err) => console.error("Error fetching home data:", err))
       .finally(() => setIsLoading(false));
@@ -66,9 +47,10 @@ export default function HomeScreen() {
     if (loadingRef.current) return;
     loadingRef.current = true;
     setIsLoadingMore(true);
-    getComicsByType(page, type)
+    apiService
+      .getComicsByType(page, type)
       .then((res) => {
-        const newComics = res.data?.items || [];
+        const newComics = res.items || [];
         if (page === 1) {
           setComics(newComics);
         } else {
@@ -167,27 +149,6 @@ export default function HomeScreen() {
     [homeComics, renderCarouselItem]
   );
 
-  const toggleCategoryPicker = () =>
-    setIsCategoryPickerVisible(!isCategoryPickerVisible);
-
-  const handleCategoryChange = (category: Category) => {
-    dispatch(setCategory(category));
-    toggleCategoryPicker();
-    router.push({
-      pathname: `/[categorySlug]`,
-      params: {
-        categorySlug: category.slug,
-        title: category?.name || "",
-      },
-    });
-  };
-
-  const navigationButtons: NavButton[] = [
-    { icon: "home", onPress: () => router.push("/") },
-    { icon: "list", onPress: toggleCategoryPicker },
-    { icon: "time", onPress: () => {} },
-  ];
-
   if (isLoading && comics.length === 0) {
     return <LoadingIndicator />;
   }
@@ -225,47 +186,6 @@ export default function HomeScreen() {
           )
         }
       />
-      <NavigationBar buttons={navigationButtons} />
-      <Modal
-        visible={isCategoryPickerVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={toggleCategoryPicker}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.pickerContainer}>
-            <FlatList
-              data={categories}
-              renderItem={({ item }: { item: Category }) => (
-                <TouchableOpacity
-                  style={styles.CategoryItem}
-                  onPress={() => handleCategoryChange(item)}
-                >
-                  <Text
-                    style={
-                      item.slug === currentCategory?.slug
-                        ? styles.selectedCategory
-                        : null
-                    }
-                  >
-                    {item.name}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              keyExtractor={(item) => item._id}
-              style={styles.CategoryList}
-            />
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={toggleCategoryPicker}
-            >
-              <ThemedText style={styles.closeButtonText}>
-                {i18n.t("close")}
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -307,40 +227,5 @@ const styles = StyleSheet.create({
   endMessage: {
     textAlign: "center",
     padding: 16,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  pickerContainer: {
-    backgroundColor: "white",
-    borderRadius: 10,
-    padding: 20,
-    width: "80%",
-    maxHeight: "80%",
-  },
-  CategoryList: {
-    maxHeight: "90%",
-  },
-  CategoryItem: {
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  selectedCategory: {
-    fontWeight: "bold",
-    color: "blue",
-  },
-  closeButton: {
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 5,
-    alignItems: "center",
-  },
-  closeButtonText: {
-    fontWeight: "bold",
   },
 });

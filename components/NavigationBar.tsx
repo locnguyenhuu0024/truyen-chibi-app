@@ -1,6 +1,11 @@
-import React from "react";
+import React, { useEffect, useState } from "react"; // Add useEffect and useState
 import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { Colors } from "@/constants/Colors";
+import { getAccessToken } from "@/utils/secure.store.helper";
+import { useDispatch, useSelector } from "react-redux";
+import { selectAccessToken, setAccessToken } from "@/store/authSlice";
 
 export interface NavButton {
   icon: keyof typeof Ionicons.glyphMap;
@@ -11,19 +16,42 @@ interface NavigationBarProps {
   buttons: NavButton[];
 }
 
-export const NavigationBar: React.FC<NavigationBarProps> = ({ buttons }) => (
-  <View style={styles.navigationBar}>
-    {buttons.map((button, index) => (
-      <TouchableOpacity
-        key={index}
-        onPress={button.onPress}
-        style={styles.navButton}
-      >
-        <Ionicons name={button.icon} size={20} color="black" />
-      </TouchableOpacity>
-    ))}
-  </View>
-);
+export const NavigationBar: React.FC<NavigationBarProps> = ({ buttons }) => {
+  const router = useRouter();
+  const dispatch = useDispatch();
+  const accessToken = useSelector(selectAccessToken);
+
+  useEffect(() => {
+    fetchAccessToken();
+  }, []);
+
+  const fetchAccessToken = async () => {
+    const token = await getAccessToken();
+    dispatch(setAccessToken(token));
+  };
+
+  const handleButtonPress = (onPress: () => void) => {
+    if (accessToken) {
+      onPress();
+    } else {
+      router.push("/auth/login");
+    }
+  };
+
+  return (
+    <View style={styles.navigationBar}>
+      {buttons.map((button, index) => (
+        <TouchableOpacity
+          key={index}
+          style={styles.navButton}
+          onPress={() => handleButtonPress(button.onPress)}
+        >
+          <Ionicons name={button.icon} size={24} color={Colors["light"].text} />
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   navigationBar: {

@@ -1,4 +1,4 @@
-import { getChapterById } from "@/api";
+import ApiService from "@/api";
 import { ThemedText } from "@/components/ThemedText";
 import { ChapterResponse, ImageSize } from "@/types/chapter";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -10,6 +10,7 @@ import {
   Dimensions,
   View,
   FlatList,
+  FlatList as ChapterFlatList,
   Text,
 } from "react-native";
 import { SkeletonLoader } from "@/components/SkeletonLoader";
@@ -19,9 +20,12 @@ import { setCurrentChapterId, selectChapterList } from "@/store/chaptersSlice";
 import i18n from "@/utils/languages/i18n";
 import { Modal, TouchableOpacity } from "react-native";
 import { ChapterData } from "@/types/comic";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import { NavigationBar, NavButton } from "@/components/NavigationBar";
+import { selectCurrentComic } from "@/store/comicsSlice";
+import { HistorySaveRequest } from "@/types/history";
+import { updateHistory } from "@/store/historiesSlice";
+import { getAccessToken } from "@/utils/secure.store.helper";
+import { selectAccessToken } from "@/store/authSlice";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -32,11 +36,15 @@ export default function ChapterPage() {
   const router = useRouter();
   const dispatch = useDispatch();
   const flatListRef = useRef<FlatList>(null);
+  const chapterFlatListRef = useRef<ChapterFlatList>(null);
   const [chapterData, setChapterData] = useState<ChapterResponse>();
   const [error, setError] = useState<string | null>(null);
   const [imageSizes, setImageSizes] = useState<ImageSize[]>([]);
+  const accessToken = useSelector(selectAccessToken);
   const chapterList = useSelector(selectChapterList);
+  const currentComic = useSelector(selectCurrentComic);
   const [isPickerVisible, setIsPickerVisible] = useState(false);
+  const apiService = new ApiService();
 
   useEffect(() => {
     if (id) {
@@ -46,16 +54,22 @@ export default function ChapterPage() {
     }
   }, [id]);
 
+  useEffect(() => {
+    if (chapterData) {
+      saveHistoryData();
+    }
+  }, [chapterData]);
+
   const fetchChapterData = useCallback(async (chapterId: string) => {
     try {
-      const response = await getChapterById(chapterId);
+      const response = await apiService.getChapterById(chapterId);
       setChapterData(response);
       const sizes: ImageSize[] = await Promise.all(
         response.chapter_images.map(
           (image) =>
             new Promise<ImageSize>((resolve) => {
               Image.getSize(image.image_file, (width, height) => {
-                resolve({ width, height, page: image.image_page });
+                resolve({ width, height });
               });
             })
         )
@@ -68,6 +82,27 @@ export default function ChapterPage() {
       setError("Failed to load chapter data. Please try again.");
     }
   }, []);
+
+  const saveHistoryData = async () => {
+    try {
+      const historyRequest: HistorySaveRequest = {
+        slug: currentComic.slug,
+        latest_read_chapter_id: id,
+        thumbnail: currentComic.thumb_url,
+        name: currentComic.name,
+        latest_read_chapter: chapterData?.chapter_name,
+      };
+
+      if (accessToken) {
+        console.log(accessToken);
+        const history = await apiService.saveHistory(historyRequest);
+        dispatch(updateHistory(history));
+      }
+    } catch (error) {
+      // @ts-ignore
+      console.log("Save history failed!", error.message);
+    }
+  };
 
   const handleRetry = useCallback(() => {
     if (id) {
@@ -105,6 +140,14 @@ export default function ChapterPage() {
 
   const togglePicker = () => {
     setIsPickerVisible(!isPickerVisible);
+    if (!isPickerVisible && id) {
+      const index = chapterList.findIndex(
+        (chapter) => chapter.chapter_id === id
+      );
+      if (index !== -1) {
+        chapterFlatListRef.current?.scrollToIndex({ index, animated: true });
+      }
+    }
   };
 
   const scrollToTop = () => {
@@ -187,7 +230,8 @@ export default function ChapterPage() {
       >
         <View style={styles.modalContainer}>
           <View style={styles.pickerContainer}>
-            <FlatList
+            <ChapterFlatList
+              ref={chapterFlatListRef}
               data={chapterList}
               renderItem={({ item }: { item: ChapterData }) => (
                 <TouchableOpacity

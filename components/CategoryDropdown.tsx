@@ -7,7 +7,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getCategories } from "@/api";
+import ApiService from "@/api";
 
 interface Category {
   id: string;
@@ -21,6 +21,7 @@ const CategoryDropdown = () => {
     null
   );
   const [isOpen, setIsOpen] = useState(false);
+  const apiService = new ApiService();
 
   useEffect(() => {
     fetchCategories();
@@ -28,7 +29,7 @@ const CategoryDropdown = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await getCategories();
+      const response = await apiService.getCategories();
       setCategories(response);
     } catch (error) {
       console.error("Error fetching categories:", error);

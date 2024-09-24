@@ -27,5 +27,8 @@ export type Chapter = {
 export interface ImageSize {
   width: number;
   height: number;
-  page: string | number;
+}
+
+export interface ImageDetails extends ImageSize {
+  url: string;
 }

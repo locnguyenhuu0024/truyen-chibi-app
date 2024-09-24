@@ -16,5 +16,10 @@
   "read_at_beginning": "Read from the beginning",
   "read_new_chap": "Read latest chapter",
   "close": "Close",
-  "no_more_comics": "No more comics"
+  "no_more_comics": "No more comics",
+  "logout": "Logout",
+  "read_to": "Read to chapter",
+  "histories": "Histories",
+  "update": "Update",
+  "continue_reading": "Continue reading"
 }

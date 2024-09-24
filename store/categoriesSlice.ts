@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Category } from "../types/comic";
+import { Category } from "@/types/comic";
 import { RootState } from ".";
 
 interface CategoriesState {

@@ -1,10 +1,13 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { getHome, getComicsByType } from "@/api";
+import { ComicTypes } from "@/utils/enums/comic.type";
+import { Comic, initialComic } from "@/types/comic";
 
 interface ComicsState {
   homeComics: any[];
-  comics: any[];
+  comics: Comic[];
   page: number;
+  currentComic: Comic;
   type: string;
   isLoading: boolean;
   isLoadingMore: boolean;
@@ -16,6 +19,7 @@ const initialState: ComicsState = {
   homeComics: [],
   comics: [],
   page: 1,
+  currentComic: initialComic,
   type: "new",
   isLoading: false,
   isLoadingMore: false,
@@ -48,6 +52,9 @@ const comicsSlice = createSlice({
       state.page = 1;
       state.comics = [];
       state.hasMoreData = true;
+    },
+    setCurrentComic: (state, action: PayloadAction<Comic>) => {
+      state.currentComic = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -88,5 +95,7 @@ const comicsSlice = createSlice({
   },
 });
 
-export const { setType } = comicsSlice.actions;
+export const { setType, setCurrentComic } = comicsSlice.actions;
+export const selectCurrentComic = (state: { comics: ComicsState }) =>
+  state.comics.currentComic;
 export default comicsSlice.reducer;

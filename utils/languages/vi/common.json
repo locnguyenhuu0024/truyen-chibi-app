@@ -16,5 +16,10 @@
   "read_at_beginning": "Đọc từ đầu",
   "read_new_chap": "Đọc chương mới nhất",
   "close": "Đóng",
-  "no_more_comics": "No more comics"
+  "no_more_comics": "No more comics",
+  "logout": "Đăng xuất",
+  "read_to": "Đọc đến chương",
+  "histories": "Lịch sử đọc",
+  "update": "Cập nhật",
+  "continue_reading": "Tiếp tục đọc"
 }

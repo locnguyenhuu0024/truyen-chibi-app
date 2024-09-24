@@ -6,19 +6,20 @@ import {
   StyleSheet,
   SectionList,
   Pressable,
-  Button,
   TouchableOpacity,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { getComicBySlug } from "@/api";
+import { Slot, useLocalSearchParams, useRouter } from "expo-router";
+import ApiService from "@/api";
 import { ChapterData, Comic } from "@/types/comic";
 import { cdnImage } from "@/constants/Api";
 import { useNavigation } from "@react-navigation/native";
 import i18n from "@/utils/languages/i18n";
-import { Link } from "expo-router";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { setChapters } from "@/store/chaptersSlice";
 import { getChapterId } from "@/utils/chapter.helper";
+import { setCurrentComic } from "@/store/comicsSlice";
+import { selectHistories } from "@/store/historiesSlice";
+import { History } from "@/types/history";
 
 type SectionItem = Comic | ChapterData;
 
@@ -28,11 +29,19 @@ export default function ComicDetailScreen() {
   const dispatch = useDispatch();
   const { slug, title } = useLocalSearchParams();
   const [comicDetails, setComicDetails] = useState<Comic | null>(null);
+  const histories = useSelector(selectHistories);
+  const [history, setHistory] = useState<History>();
+  const apiService = new ApiService();
+
+  useEffect(() => {
+    setHistory(histories.find((h) => h.slug === slug));
+  }, []);
 
   useEffect(() => {
     async function fetchComicDetails() {
-      const response = await getComicBySlug(slug as string);
+      const response = await apiService.getComicBySlug(slug as string);
       setComicDetails(response);
+      dispatch(setCurrentComic(response));
       dispatch(setChapters(response.chapters));
     }
     fetchComicDetails();
@@ -42,33 +51,41 @@ export default function ComicDetailScreen() {
     navigation.setOptions({ title: title });
   }, [navigation, title]);
 
-  const handleReadFromStart = () => {
+  const navigateToChapter = async (chapter: ChapterData) => {
+    const chapterId = getChapterId(chapter.chapter_api_data);
+    router.push({
+      pathname: "/comics/chapter/[id]",
+      params: {
+        id: chapterId,
+      },
+    });
+  };
+
+  const handleReadFromStart = async () => {
     if (comicDetails && comicDetails.chapters[0].server_data.length > 0) {
       const firstChapter = comicDetails.chapters[0].server_data[0];
-      const chapterId = getChapterId(firstChapter.chapter_api_data);
-      router.push({
-        pathname: "/comics/chapter/[id]",
-        params: {
-          id: chapterId,
-        },
-      });
+      await navigateToChapter(firstChapter);
     }
   };
 
-  const handleReadLatestChapter = () => {
+  const handleReadLatestChapter = async () => {
     if (comicDetails && comicDetails.chapters[0].server_data.length > 0) {
       const latestChapter =
         comicDetails.chapters[0].server_data[
           comicDetails.chapters[0].server_data.length - 1
         ];
-      const chapterId = getChapterId(latestChapter.chapter_api_data);
-      router.push({
-        pathname: "/comics/chapter/[id]",
-        params: {
-          id: chapterId,
-        },
-      });
+      await navigateToChapter(latestChapter);
     }
+  };
+
+  const handleContinueReading = async () => {
+    const chapterId = history?.latest_read_chapter_id as string;
+    router.push({
+      pathname: "/comics/chapter/[id]",
+      params: {
+        id: chapterId,
+      },
+    });
   };
 
   if (!comicDetails) {
@@ -122,6 +139,18 @@ export default function ComicDetailScreen() {
                   </Text>
                 </View>
               </View>
+              {history && (
+                <View style={styles.buttonReadContinueContainer}>
+                  <TouchableOpacity
+                    style={[styles.button, styles.primaryButton]}
+                    onPress={handleContinueReading}
+                  >
+                    <Text style={styles.primaryButtonText}>
+                      {i18n.t("continue_reading")}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
               <View style={styles.buttonContainer}>
                 <TouchableOpacity
                   style={[styles.button, styles.secondaryButton]}
@@ -149,23 +178,23 @@ export default function ComicDetailScreen() {
             </>
           );
         } else if ("chapter_name" in item) {
+          const isRead = history?.read_chapter_ids.includes(
+            getChapterId(item.chapter_api_data)
+          );
           return (
-            <Link
-              href={{
-                pathname: "/comics/chapter/[id]",
-                params: {
-                  id: getChapterId(item.chapter_api_data),
-                },
-              }}
-              asChild
+            <Pressable
+              style={styles.chapterItem}
+              onPress={() => navigateToChapter(item)}
             >
-              <Pressable style={styles.chapterItem}>
-                <Text>Chương {item.chapter_name}</Text>
-              </Pressable>
-            </Link>
+              <Text
+                style={isRead ? styles.chapterReadText : styles.chapterText}
+              >
+                Chương {item.chapter_name}
+              </Text>
+            </Pressable>
           );
         }
-        return null;
+        return <Slot />;
       }}
       renderSectionHeader={({ section: { title } }) =>
         title === "Chapters" ? (
@@ -229,6 +258,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
+  chapterReadText: {
+    fontWeight: 300,
+    color: "#666",
+  },
+  chapterText: {
+    fontWeight: 500,
+  },
   buttonContainer: {
     fontSize: 16,
     flexDirection: "row",
@@ -240,6 +276,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 5,
+    alignItems: "center",
   },
   primaryButton: {
     backgroundColor: "#007AFF",
@@ -254,5 +291,11 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: "#007AFF",
     fontWeight: "bold",
+  },
+  buttonReadContinueContainer: {
+    padding: 16,
+  },
+  buttonReadContinue: {
+    textAlign: "center",
   },
 });
